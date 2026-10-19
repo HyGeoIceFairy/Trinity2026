@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eef1e9">
+  <meta name="description" content="Trinity 2026 十二关卡牌挑战。选一张牌，让故事继续。">
+  <title>Trinity Cards</title>
+  <link rel="icon" href="assets/favicon.webp">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="play.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <div class="paper-noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Trinity Cards 首页"><img src="assets/logo.webp" alt="Trinity"><span>CARDS <i>2026</i></span></a>
+    <div class="top-actions"><button id="sound" class="quiet icon-button" aria-label="开启声音" aria-pressed="false">♪<span>声音关</span></button><button id="rules-open" class="quiet">玩法 <span class="key">?</span></button><button id="menu-open" class="quiet" aria-label="打开菜单">菜单 <span>☰</span></button></div>
+  </header>
+  <main id="main">
+    <section id="welcome" class="welcome">
+      <div class="welcome-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><img class="welcome-character" src="assets/replay-nagisa.webp" alt=""><span class="paper-label">十二场相遇，一副小小的牌。</span></div>
+      <div class="welcome-copy"><p class="eyebrow">TRINITY 2026 · 人类游玩版</p><h1>这一回，<br>由你<span>出牌。</span></h1><p class="intro">和渚一起走过十二幕。<br>观察对手的意图，把每一点能量用在恰好的地方。</p><div class="start-actions"><button id="start" class="primary">开始旅程 <span>↗</span></button><button id="resume" class="secondary" hidden>继续上次旅程</button></div><div class="welcome-facts"><span><b>12</b> 场战斗</span><span><b>60</b> 初始体力</span><span><b>12,160</b> 最高分</span></div><p class="small-note">沿用正式赛规则与难度 · 无操作计时 · 自动保存</p><div id="best-home" class="best-note"></div></div>
+      <span class="welcome-number" aria-hidden="true">01—12</span>
+    </section>
+    <section id="game" class="game" hidden>
+      <div class="game-heading"><div><p id="act-label" class="eyebrow">ACT 01 / 12</p><h1 id="scene-title">海边独白</h1></div><div class="score-box"><span>当前得分</span><strong id="score">60</strong></div></div>
+      <nav id="route" class="route" aria-label="旅程进度"></nav>
+      <div class="table-layout">
+        <section id="stage" class="stage" aria-label="战斗舞台">
+          <div class="scene-image"></div><div class="scene-grain"></div>
+          <div class="stage-caption"><span id="stage-name">海边独白</span><span id="turn">第 1 回合</span></div>
+          <div class="fighters">
+            <article id="hero" class="fighter hero"><div class="portrait-wrap"><img id="hero-art" src="assets/replay-nagisa.webp" alt="古河渚"><div id="hero-floats" class="floats" aria-hidden="true"></div></div><div class="fighter-sheet"><p class="fighter-sub">你的角色</p><h2>古河渚</h2><div class="health-line"><strong id="hero-hp">60 <small>/ 60</small></strong><span class="heart">♥</span></div><div class="health-track"><div id="hero-health"></div></div><div id="hero-status" class="statuses"></div></div></article>
+            <div class="encounter-center" aria-hidden="true"><span>✧</span><i id="center-note">YOUR TURN</i></div>
+            <article id="enemy" class="fighter enemy"><div class="portrait-wrap"><img id="enemy-art" src="assets/replay-shiroha.webp" alt="鸣濑白羽"><div id="enemy-floats" class="floats" aria-hidden="true"></div></div><div class="fighter-sheet"><p id="enemy-sub" class="fighter-sub">本幕对手</p><h2 id="enemy-name">鸣濑白羽</h2><div class="health-line"><strong id="enemy-hp">32 <small>/ 32</small></strong><span class="heart">♥</span></div><div class="health-track"><div id="enemy-health"></div></div><div id="enemy-status" class="statuses"></div></div></article>
+          </div>
+          <div id="intent" class="intent"><span class="intent-heading">对手下一步</span><div id="intent-value"></div><p id="forecast"></p></div>
+          <div id="scene-banner" class="scene-banner" aria-live="polite"></div>
+        </section>
+        <aside class="sidebar">
+          <div class="resource-panel"><p class="eyebrow">YOUR RESOURCES</p><div class="energy-display"><span id="energy">3</span><div><b>能量</b><small>每回合恢复为 3</small></div><div id="energy-orbs" class="energy-orbs" aria-hidden="true"></div></div><div class="sidebar-line"><span>本回合还可出牌</span><b id="actions-left">20 次</b></div></div>
+          <div class="pile-buttons"><button data-pile="deck"><span>▤ <b>完整牌组</b></span><strong id="deck-count">10</strong></button><button data-pile="draw"><span>▧ <b>抽牌堆</b></span><strong id="draw-count">5</strong></button><button data-pile="discard"><span>▱ <b>弃牌堆</b></span><strong id="discard-count">0</strong></button><button data-pile="exhaust"><span>✧ <b>消耗区</b></span><strong id="exhaust-count">0</strong></button></div>
+          <button id="log-open" class="log-button">行动记录 <span>↗</span></button><div class="sidebar-tip"><span>✦</span><p id="tip">先看对手的意图，再决定出哪张牌。</p></div>
+        </aside>
+      </div>
+      <section class="hand-section"><div class="hand-heading"><div><h2 id="hand-title">你的手牌</h2><p id="hand-note">悬停查看 · 双击出牌 · 拖向舞台也可以</p></div><span id="hand-counter"></span></div><div id="hand" class="hand" role="group" aria-label="手牌"></div></section>
+      <div id="actionbar" class="actionbar"><div id="selection" class="selection"><span class="selection-mark">✧</span><p>把光留在手里，<br><b>然后做出你的选择。</b></p></div><button id="confirm" class="primary" disabled>选择一张牌 <span>↗</span></button><button id="end-turn" class="secondary">结束回合 <span>→</span></button></div>
+      <div id="game-status" class="sr-only" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+  <aside id="card-detail" class="card-detail" role="tooltip" hidden></aside>
+  <footer><span>TRINITY 2026</span><span>一张牌，一小步。<span class="desktop-only"> · <kbd>1–0</kbd> 选牌 <kbd>Enter</kbd> 确认 <kbd>Esc</kbd> 取消</span></span><span id="save-state">本地游玩</span></footer>
+  <dialog id="modal"><div class="dialog-heading"><div><p id="modal-eyebrow" class="eyebrow">TRINITY CARDS</p><h2 id="modal-title">玩法</h2></div><button id="modal-close" class="close-button" aria-label="关闭弹窗">×</button></div><div id="modal-content"></div></dialog>
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>
