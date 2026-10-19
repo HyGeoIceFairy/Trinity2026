@@ -1,6 +1,6 @@
 # Trinity 2026
 
-[游玩](https://trinity-cards.woodsyboar32.chatgpt.site)
+[游玩](https://hygeoicefairy.github.io/Trinity2026/game/) · [备用](https://trinity-cards.woodsyboar32.chatgpt.site)
 
 | 题目 | 附件 |
 | --- | --- |

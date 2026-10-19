@@ -18,7 +18,7 @@ const paths = {
   sustain:'M24 6 7 24l17 18 17-18Zm0 9v18M15 24h18',
 };
 const STORAGE='trinity-cards-save-v1', BEST='trinity-cards-best-v1';
-let game,seed='',selected=null,busy=false,sound=false,audio,toastTimer,previousKind='shadow',lastSave=null,drag=null,suppressClickUntil=0;
+let game,seed='',selected=null,inspected=null,busy=false,sound=false,audio,toastTimer,previousKind='shadow',lastSave=null,drag=null,suppressClickUntil=0;
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,reduced()?0:ms));
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
@@ -60,9 +60,11 @@ function makeCard(c,{action=null,index=-1,preview=false}={}){
   return node;
 }
 function select(id,card,preview=false,node=null){selected={id,card,preview};for(const n of $('hand').querySelectorAll('[data-action]')){const yes=n.dataset.action===id;n.classList.toggle('selected',yes);n.setAttribute('aria-pressed',String(yes));n.closest('.card-slot')?.classList.toggle('selected',yes);}renderSelection();inspectCard(id,card,preview,node??$('hand').querySelector(`[data-action="${id}"]`));tone('select');}
-function clearPreview(){selected=null;$('card-detail').hidden=true;for(const n of $('hand').querySelectorAll('.inspected,.selected'))n.classList.remove('inspected','selected');for(const n of $('hand').querySelectorAll('[aria-pressed]'))n.setAttribute('aria-pressed','false');if(game)renderSelection();}
+function clearPreview(){selected=null;inspected=null;$('card-detail').hidden=true;for(const n of $('hand').querySelectorAll('.inspected,.selected'))n.classList.remove('inspected','selected');for(const n of $('hand').querySelectorAll('[aria-pressed]'))n.setAttribute('aria-pressed','false');if(game)renderSelection();}
 function inspectCard(id,c,preview,node){
   if(!node||$('modal').open)return;
+  if(selected&&selected.id!==id){selected=null;for(const n of $('hand').querySelectorAll('.selected'))n.classList.remove('selected');for(const n of $('hand').querySelectorAll('[aria-pressed]'))n.setAttribute('aria-pressed','false');renderSelection();}
+  inspected={id,card:c,preview};
   for(const n of $('hand').querySelectorAll('.inspected'))n.classList.remove('inspected');node.closest('.card-slot')?.classList.add('inspected');
   const detail=$('card-detail');detail.replaceChildren(el('h3','',preview?`${c.name} → 升级`:c.name),el('p','detail-cost',`${kinds[c.kind]} · ${c.cost} 能量`));
   const e=preview?CARDS[c.kind][3]:c.effects;
@@ -95,7 +97,7 @@ function status(container,block,strength,poison){container.replaceChildren();for
 }
 function render(){
   const o=game.observation(),battle=o.phase==='battle',kind=battle?o.enemy.kind:previousKind,actor=cast[kind];previousKind=kind;
-  document.body.classList.add('playing');for(const p of ['battle','reward','rest','terminal'])document.body.classList.toggle(p,o.phase===p);$('card-detail').hidden=true;
+  document.body.classList.add('playing');for(const p of ['battle','reward','rest','terminal'])document.body.classList.toggle(p,o.phase===p);$('card-detail').hidden=true;inspected=null;
   const displayStage=battle?o.stage:Math.max(1,o.completed);
   text('act-label',`ACT ${String(displayStage).padStart(2,'0')} / 12${displayStage%3===0?' · BOSS':''}`);
   text('scene-title',o.phase==='reward'?'把这一幕，带在身边':o.phase==='rest'?'幕间，稍作休息':o.phase==='terminal'?'旅程的回声':actor[2]);
@@ -112,7 +114,7 @@ function render(){
   status($('hero-status'),battle?o.block:0,battle?o.strength:0,0);
   const art=$('enemy-art');if(!art.src.endsWith(`replay-${actor[3]}.webp`))art.src=`assets/replay-${actor[3]}.webp`;art.alt=actor[0];text('enemy-name',actor[0]);text('enemy-sub',actor[1]);
   $('enemy').style.opacity=battle?'1':'.6';
-  const e=$('enemy-hp');e.replaceChildren(document.createTextNode(battle?`${o.enemy.hp} `:'0 '),el('small','',`/ ${battle?o.enemy.maxHp:game.enemy.maxHp}`));$('enemy-health').style.width=battle?`${o.enemy.hp/o.enemy.maxHp*100}%`:'0%';
+  const shownEnemy=battle?o.enemy:game.enemy,e=$('enemy-hp');e.replaceChildren(document.createTextNode(`${shownEnemy.hp} `),el('small','',`/ ${shownEnemy.maxHp}`));$('enemy-health').style.width=`${shownEnemy.hp/shownEnemy.maxHp*100}%`;
   status($('enemy-status'),battle?o.enemy.block:0,battle?o.enemy.strength:0,battle?o.enemy.poison:0);
   $('intent').hidden=!battle;
   if(battle){text('intent-value',effects(o.intent));const incoming=(o.intent.damage??0)*(o.intent.hits??1),poisonLethal=o.enemy.poison>=o.enemy.hp;const loss=poisonLethal?0:Math.max(0,incoming-o.block);text('forecast',poisonLethal?'毒将先于对手行动，结束本幕。':incoming?`现在结束回合：失去 ${loss} 体力${loss>=o.player.hp?' · 将体力耗尽':''}`:'本回合对手不会攻击。');text('tip',o.enemy.poison?'毒会先结算，无视格挡，然后减少 1。':o.strength?'力量会加到每一段卡牌伤害上。':o.draw_count===0?'抽牌堆空时，弃牌会重新洗入。':'先看对手的意图，再决定出哪张牌。');}
@@ -122,7 +124,7 @@ function render(){
   text('hand-title',battle?'你的手牌':o.phase==='reward'?'选择一张奖励':o.phase==='rest'?'选择一张牌升级':'最终牌组');
   const touch=innerWidth<=720;
   text('hand-note',battle?(touch?'轻点看牌 · 再点打出 · 左右滑动手牌':'悬停查看 · 双击出牌 · 拖向舞台 · 1–0 选牌，Enter 出牌，E 结束回合'):o.phase==='reward'?(touch?'轻点查看，再点领取 · 也可跳过':'双击领取一张奖励 · 也可跳过'):o.phase==='rest'?`下方显示升级后效果 · ${touch?'再点':'双击'}升级，或恢复 ${Math.min(18,60-o.player.hp)} 体力。`:'谢谢你走过这一程。');text('hand-counter',`${cards.length} CARDS`);
-  cards.forEach((c,i)=>{const action=battle?`play:${c.uid}`:o.phase==='reward'?`pick:${i}`:o.phase==='rest'?`upgrade:${c.uid}`:null;const n=makeCard(c,{action,index:i,preview:o.phase==='rest'}),slot=el('div','card-slot');slot.dataset.uid=c.uid;slot.append(n);if(!old.has(String(c.uid)))n.classList.add('new-card');for(const type of ['pointerenter','pointerdown','click','dblclick'])slot.addEventListener(type,e=>{if(e.target===slot)n.forwardCardEvent?.(e);});slot.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!drag&&!selected){slot.classList.remove('inspected');$('card-detail').hidden=true;}});$('hand').append(slot);});
+  cards.forEach((c,i)=>{const action=battle?`play:${c.uid}`:o.phase==='reward'?`pick:${i}`:o.phase==='rest'?`upgrade:${c.uid}`:null;const n=makeCard(c,{action,index:i,preview:o.phase==='rest'}),slot=el('div','card-slot');slot.dataset.uid=c.uid;slot.append(n);if(!old.has(String(c.uid)))n.classList.add('new-card');for(const type of ['pointerenter','pointerdown','click','dblclick'])slot.addEventListener(type,e=>{if(e.target===slot)n.forwardCardEvent?.(e);});slot.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!drag&&!selected){slot.classList.remove('inspected');$('card-detail').hidden=true;inspected=null;}});$('hand').append(slot);});
   if(!cards.length)$('hand').append(el('p','hand-empty',battle?'手牌已空。可以结束回合了。':'没有可升级的牌。'));
   arrangeHand();$('hand').scrollLeft=scroll;
   if(!reduced())for(const slot of $('hand').querySelectorAll('.card-slot')){const oldRect=oldPositions.get(slot.dataset.uid);if(oldRect){const now=slot.getBoundingClientRect();slot.animate([{translate:`${oldRect.left-now.left}px ${oldRect.top-now.top}px`},{translate:'0 0'}],{duration:220,easing:'cubic-bezier(.2,.7,.2,1)'});}}
@@ -186,7 +188,7 @@ $('end-turn').addEventListener('click',()=>perform(game.phase==='battle'?'end':g
 $('rules-open').addEventListener('click',()=>{clearPreview();rules();});$('menu-open').addEventListener('click',()=>{clearPreview();menu();});$('modal-close').addEventListener('click',()=>$('modal').close());$('modal').addEventListener('click',e=>{if(e.target===$('modal')){const r=$('modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('modal').close();}});
 $('sound').addEventListener('click',()=>{sound=!sound;updateSound();if(sound)tone('select');});
 for(const b of document.querySelectorAll('[data-pile]'))b.addEventListener('click',()=>showPile(b.dataset.pile));$('log-open').addEventListener('click',showLog);
-document.addEventListener('keydown',e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='?'&&!$('modal').open){e.preventDefault();rules();return;}if(!game||$('game').hidden||$('modal').open||busy)return;if(e.key==='Escape'){clearPreview();return;}if(e.key==='Enter'&&selected){e.preventDefault();perform(selected.id);return;}if(e.key.toLowerCase()==='e'&&game.phase==='battle'){e.preventDefault();perform('end');return;}if(/^\d$/.test(e.key)){e.preventDefault();const i=e.key==='0'?9:Number(e.key)-1,n=$('hand').querySelectorAll('[data-action]')[i];if(n){const o=game.observation(),cards=o.phase==='battle'?o.hand:o.phase==='reward'?o.offers:o.deck.filter(c=>!c.upgraded);select(n.dataset.action,cards[i],o.phase==='rest',n);n.scrollIntoView({behavior:'instant',block:'nearest',inline:'nearest'});}}});
+document.addEventListener('keydown',e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='?'&&!$('modal').open){e.preventDefault();rules();return;}if(!game||$('game').hidden||$('modal').open||busy)return;if(e.key==='Escape'){clearPreview();return;}const preview=selected??inspected;if(e.key==='Enter'&&preview){e.preventDefault();perform(preview.id);return;}if(e.key.toLowerCase()==='e'&&game.phase==='battle'){e.preventDefault();perform('end');return;}if(/^\d$/.test(e.key)||e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();const nodes=[...$('hand').querySelectorAll('[data-action]')];if(!nodes.length)return;let i;if(/^\d$/.test(e.key))i=e.key==='0'?9:Number(e.key)-1;else{const current=nodes.findIndex(n=>n.dataset.action===preview?.id);i=current<0?0:(current+(e.key==='ArrowRight'?1:-1)+nodes.length)%nodes.length;}const n=nodes[i];if(n){const o=game.observation(),cards=o.phase==='battle'?o.hand:o.phase==='reward'?o.offers:o.deck.filter(c=>!c.upgraded);select(n.dataset.action,cards[i],o.phase==='rest',n);n.scrollIntoView({behavior:'instant',block:'nearest',inline:'nearest'});}}});
 document.addEventListener('pointermove',e=>{
   if(!drag||drag.pointer!==e.pointerId||drag.cancelled)return;
   const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
